@@ -2,8 +2,9 @@
 title: "MA615 Unit 1 final"
 author: "Zhaosheng-Xie"
 output:
+  html_document:
+    df_print: paged
   pdf_document: default
-
 ---
 
 ```{r setup, include=FALSE}
@@ -27,12 +28,18 @@ Data %<>% select(-c("Program","Geo Level","Ag District","Week Ending",8:15,21))
 Data <- filter(Data,Value!='(D)',Value!='(NA)')
 Data$Value[which(Data$Value=='(Z)')] <- 0
 
+```
+```{r}
 ##Split Data Item 
 new <- Data
 # new <- separate(new,col = "Data Item",into = c("species","definition","unit"),sep = ",",remove = TRUE)
 # new <- separate(new,col = "Data Item",into = c("q","w","e","r"),sep = ",",remove = TRUE)
 # new$unit <- tail(strsplit(new$`Data Item`,split=",")[[1]],1) 
 
+```
+
+
+```{r}
 #1.Unit
 nr <- nrow(new)
 for (i in 1:nr) {
@@ -51,6 +58,10 @@ new2$unit[which(new2$unit=="STRAWBERRIES - ACRES HARVESTED"|
 new2$unit[which(new2$unit=="STRAWBERRIES - ACRES PLANTED")] <- "ACRES PLANTED"
 unique(new2$unit)
 
+
+```
+
+```{r}
 #2.Type
 new3 <- new2
 new3 %<>% separate(`Data Item`, c("B","type", "meas", "what"), sep = ",",remove = FALSE) 
@@ -71,6 +82,11 @@ new3$type[which(new3$type=="MEASURED"
 new3$type[which(new3$type=="NOT")] <- "NOT SOLD"
 new3$type[which(new3$type=="FRESH")] <- "FRESH MARKET"
 
+
+
+```
+
+```{r}
 #3.Production
 #The true values are hided in columns"lab1,lab2,meas,what"
 new4 <- new3
@@ -107,26 +123,93 @@ new4$meas[which(new4$meas==" UTILIZED - YIELD")] <- "YIELD"
 # unique(new4$what)
 new4 %<>% select(-what)
 
+```
+
+
+```{r}
 #combine these 3 columns
 new4 %<>% mutate(production = str_trim(paste(lab1,lab2,meas)) )
 #unique(new4$production)
 new4$production[which(new4$production=="PRICE")] <- "PRICE RECEIVED"
-new4 %<>% select(-c(lab1,lab2,meas,what))
+new4 %<>% select(-c(lab1,lab2,meas))
 #process column production
 new4$production[c(4,5,7)] <- "PRICE RECEIVED"
 
-##onto Domain
 
 ```
 
 
+```{r}
+##onto Domain
+new5 <- new4
+# new5$Domain %>% unique()
+
+new5 %<>% separate(Domain, c("D_left", "D_right"), sep = ", ")
+
+# new5$D_left %>% unique()
+# new5$D_right %>% unique()
+
+new5[is.na(new5)] <- " "
+
+## And now Domain Category
 
 
-for (i in 1:ncol) {
-  print(unique(berries[,i]))  
-  
-}
+## new5$`Domain Category` %>% unique()
 
-for (i in 1:ncol) {
-  berries[,i] %>% unique() %>% print() 
-}
+new5 %<>% separate(`Domain Category`, c("DC_left", "DC_right"), sep = ", ")
+
+## looks like DC_left combines labels
+
+head(new5$DC_left %>% unique(),n=20)
+head(new5$DC_right %>% unique(), n=20)
+
+
+## work on DC_left first
+
+new5 %<>% separate(DC_left, c("DC_left_l", "DC_left_r"), sep = ": ")
+
+## new5$DC_left_l %>% unique()
+## new5$DC_left_r %>% unique()
+
+## now work on DC_right
+
+head(new5$DC_right %>% unique(), n=20)
+
+new5 %<>% separate(DC_right, c("DC_right_l", "DC_right_r"), sep = ": ") 
+
+
+new5[is.na(new5)] <- " "
+
+##  OK now we need to eliminate the redundancy
+## fine and remove redundant columns
+ 
+## remove column new5$DC_left_l
+new5 %<>%  select(-DC_left_l) 
+
+## remove column DC_right_l
+new5 %<>% select(-DC_right_l)
+
+
+## remove "Chemical" and joint the columns
+
+new5 %<>% mutate(D_left = "CHEMICAL", D_left = "") 
+
+new5 %<>% mutate(Chemical=paste(D_left, D_right)) 
+
+new5 %<>% select(-c(D_left, D_right)) 
+```
+```{r}
+## Final tidy data 
+
+new5$DC_left_r %>% unique() # rename chemical_family
+
+new5 %<>% rename( Chem_family = DC_left_r, Materials = DC_right_r)
+new5 %<>% mutate(Chemical = str_trim(paste(Chem_family, Chemical)))
+new5 %<>% select(-c(`Data Item`,Chem_family))
+new5 %<>% rename( Type = type, Unit = unit, Production = production)
+new5 %<>% select(Year,Period,State,Commodity,Type,Production,Chemical,Materials,Unit,Value)
+Tidyberry <- new5
+write.table(Tidyberry,"D:/MSSP/Rdata/615/Berry/Tidyberry.csv",col.names = TRUE,sep = ",")
+
+```
+
