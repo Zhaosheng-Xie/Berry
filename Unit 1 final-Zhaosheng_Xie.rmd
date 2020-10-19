@@ -209,7 +209,7 @@ new5 %<>% select(-c(`Data Item`,Chem_family))
 new5 %<>% rename( Type = type, Unit = unit, Production = production)
 new5 %<>% select(Year,Period,State,Commodity,Type,Production,Chemical,Materials,Unit,Value)
 Tidyberry <- new5
-write.table(Tidyberry,"D:/MSSP/Rdata/615/Berry/Tidyberry.csv",col.names = TRUE,sep = ",")
+write.table(Tidyberry,"D:/MSSP/Rdata/615/Berry/Tidyberry.csv",col.names = TRUE,row.name = FALSE,sep = ",")
 
 ```
 
