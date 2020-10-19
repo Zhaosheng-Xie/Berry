@@ -1,0 +1,132 @@
+---
+title: "MA615 Unit 1 final"
+author: "Zhaosheng-Xie"
+output:
+  pdf_document: default
+
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(rstanarm)
+library(dplyr)
+library(magrittr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## read the data
+```{r}
+berries <- read_csv("berries.csv", col_names = TRUE)
+Data = berries
+```
+## Data cleaning
+```{r}
+##Remove single value
+Data %<>% select(-c("Program","Geo Level","Ag District","Week Ending",8:15,21))
+#Remove NA,D and process (Z)
+Data <- filter(Data,Value!='(D)',Value!='(NA)')
+Data$Value[which(Data$Value=='(Z)')] <- 0
+
+##Split Data Item 
+new <- Data
+# new <- separate(new,col = "Data Item",into = c("species","definition","unit"),sep = ",",remove = TRUE)
+# new <- separate(new,col = "Data Item",into = c("q","w","e","r"),sep = ",",remove = TRUE)
+# new$unit <- tail(strsplit(new$`Data Item`,split=",")[[1]],1) 
+
+#1.Unit
+nr <- nrow(new)
+for (i in 1:nr) {
+  new$unit[i] <- tail(strsplit(new$`Data Item`,split=",")[[i]],1)
+  
+}
+new1 <- new
+new2 <- new1
+#Replace untidy data 
+new2$unit[which(new2$unit=="STRAWBERRIES - ACRES HARVESTED"|
+                  new2$unit==" WILD - ACRES HARVESTED"|
+                  new2$unit==" RED - ACRES HARVESTED"|
+                  new2$unit==" TAME - ACRES HARVESTED"|
+                  new2$unit=="RASPBERRIES - ACRES HARVESTED"|
+                  new2$unit==" BLACK - ACRES HARVESTED")] <- "ACRES HARVESTED"
+new2$unit[which(new2$unit=="STRAWBERRIES - ACRES PLANTED")] <- "ACRES PLANTED"
+unique(new2$unit)
+
+#2.Type
+new3 <- new2
+new3 %<>% separate(`Data Item`, c("B","type", "meas", "what"), sep = ",",remove = FALSE) 
+new3 %<>% select(-B)
+new3 %<>% separate(type,c("b1", "type", "b2", "lab1", "lab2"), " ")
+
+new3[is.na(new3)] <- " "  ## OK now Data Item has been split into parts
+# unique(new3$type)
+#I found there is something redundant about new3$type. There will be 3 types in the final data: tame, wild and bearing. So I remove others.
+new3$type[which(new3$type=="MEASURED"
+                  # new3$type=="FRESH"|
+                  # new3$type=="PROCESSING"|
+                  # new3$type=="NOT"|
+                  # new3$type=="UTILIZED"|
+                  # new3$type=="BLACK"|
+                  # new3$type=="RED"
+                  )] <- " "
+new3$type[which(new3$type=="NOT")] <- "NOT SOLD"
+new3$type[which(new3$type=="FRESH")] <- "FRESH MARKET"
+
+#3.Production
+#The true values are hided in columns"lab1,lab2,meas,what"
+new4 <- new3
+new4 %<>% select(-c(`State ANSI`,b1,b2))
+#settle these 4 columns and paste into 1 column
+# unique(new4$lab1)
+new4$lab1[which(new4$lab1=="$"|
+                new4$lab1=="-"|
+                new4$lab1=="ACRES"|
+                new4$lab1=="LB"|
+                new4$lab1=="CWT")] <- " "
+# unique(new4$lab2)
+new4$lab2[which(new4$lab2=="/"|
+                new4$lab2=="HARVESTED")] <- " "
+# unique(new4$meas)
+new4$meas[which(new4$meas==" MEASURED IN $ / LB"|
+                new4$meas==" MEASURED IN LB / ACRE"|
+                new4$meas==" MEASURED IN LB / ACRE / YEAR"|
+                new4$meas==" MEASURED IN $"|
+                new4$meas==" MEASURED IN $ / CWT"|
+                new4$meas==" MEASURED IN NUMBER"|
+                new4$meas==" MEASURED IN CWT"|
+                new4$meas==" MEASURED IN LB"|
+                new4$meas==" MEASURED IN LB / ACRE / APPLICATION"|
+                new4$meas==" MEASURED IN PCT OF AREA BEARING"|
+                new4$meas==" MEASURED IN $ / TON")] <- " "
+new4$meas[which(new4$meas==" FRESH MARKET - PRICE RECEIVED"|
+                new4$meas==" PROCESSING - PRICE RECEIVED"  )] <- "PRICE RECEIVED"
+new4$meas[which(new4$meas==" FRESH MARKET - PRODUCTION"|
+                new4$meas==" NOT SOLD - PRODUCTION"|
+                new4$meas==" PROCESSING - PRODUCTION"|
+                new4$meas==" UTILIZED - PRODUCTION")]  <- "PRODUCTION"
+new4$meas[which(new4$meas==" UTILIZED - YIELD")] <- "YIELD"
+# unique(new4$what)
+new4 %<>% select(-what)
+
+#combine these 3 columns
+new4 %<>% mutate(production = str_trim(paste(lab1,lab2,meas)) )
+#unique(new4$production)
+new4$production[which(new4$production=="PRICE")] <- "PRICE RECEIVED"
+new4 %<>% select(-c(lab1,lab2,meas,what))
+#process column production
+new4$production[c(4,5,7)] <- "PRICE RECEIVED"
+
+##onto Domain
+
+```
+
+
+
+
+for (i in 1:ncol) {
+  print(unique(berries[,i]))  
+  
+}
+
+for (i in 1:ncol) {
+  berries[,i] %>% unique() %>% print() 
+}
