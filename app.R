@@ -33,6 +33,9 @@ pca2.1$x <- -pca2.1$x
 pt.line <- plot(pca, type="lines")
 pt.bi <- biplot(pca2.1, scale = 0)
 
+pc12 <- data.frame(pca2.1$rotation[, 1:2])
+pc12$type <- rownames(pc12)
+
 set.seed(7)
 pc.km <- kmeans(pc12[, 1:2], 3, nstart = 100)
 # ggplot clusters
